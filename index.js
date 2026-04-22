@@ -146,12 +146,15 @@ class MiddleEastIntelligence {
 
   async fetchFromNewsAPI() {
     const articles = [];
-    const keywords = (config.keywords && Array.isArray(config.keywords)) ? config.keywords.join(' OR ') : 'Middle East conflict';
     const fromDate = '2026-04-20';
+    
+    // 精简的关键词，控制在500字符以内
+    const zhKeywords = '中东 OR 以色列 OR 巴勒斯坦 OR 伊朗 OR 沙特 OR 叙利亚 OR 伊拉克 OR 加沙 OR 哈马斯 OR 真主党 OR 中东冲突 OR 中东战争';
+    const enKeywords = 'Middle East OR Israel OR Palestine OR Iran OR Saudi Arabia OR Syria OR Iraq OR Gaza OR Hamas OR Hezbollah OR Middle East conflict OR Middle East war';
     
     // 中文新闻
     try {
-      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=zh&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsapi.apiKey}`;
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(zhKeywords)}&language=zh&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsapi.apiKey}`;
       console.log('请求中文新闻:', url);
       const responseData = await fetch(url);
       const zhResponse = JSON.parse(responseData);
@@ -181,7 +184,7 @@ class MiddleEastIntelligence {
     
     // 英文新闻
     try {
-      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=en&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsapi.apiKey}`;
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(enKeywords)}&language=en&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsapi.apiKey}`;
       console.log('请求英文新闻:', url);
       const responseData = await fetch(url);
       const enResponse = JSON.parse(responseData);

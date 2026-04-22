@@ -217,7 +217,7 @@ class MiddleEastIntelligence {
 
   async sendPushPlus(content) {
     try {
-      const response = await post('http://www.pushplus.plus/send', {
+      const response = await post('https://www.pushplus.plus/send', {
         token: config.pushplus.token,
         title: '中东局势情报摘要',
         content: content.replace(/\n/g, '<br>'),

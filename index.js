@@ -1,8 +1,61 @@
-const axios = require('axios');
+const https = require('https');
 const cheerio = require('cheerio');
 const cron = require('node-cron');
 const config = require('./config/config');
 const Analyzer = require('./src/analyzer');
+
+// 封装https请求函数
+function fetch(url, options = {}) {
+  return new Promise((resolve, reject) => {
+    https.get(url, options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        resolve(data);
+      });
+    }).on('error', (error) => {
+      reject(error);
+    });
+  });
+}
+
+// 封装https POST请求函数
+function post(url, data) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify(data);
+    
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': postData.length
+      }
+    };
+    
+    const req = https.request(url, options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => {
+        data += chunk;
+      });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          resolve(data);
+        }
+      });
+    });
+    
+    req.on('error', (error) => {
+      reject(error);
+    });
+    
+    req.write(postData);
+    req.end();
+  });
+}
 
 class MiddleEastIntelligence {
   constructor() {
@@ -93,17 +146,11 @@ class MiddleEastIntelligence {
     
     // 中文新闻
     try {
-      const zhResponse = await axios.get('https://newsapi.org/v2/everything', {
-        params: {
-          q: keywords,
-          language: 'zh',
-          from: fromDate,
-          sortBy: 'publishedAt',
-          apiKey: config.newsApiKey
-        }
-      });
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=zh&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsApiKey}`;
+      const responseData = await fetch(url);
+      const zhResponse = JSON.parse(responseData);
       
-      zhResponse.data.articles.forEach(article => {
+      zhResponse.articles.forEach(article => {
         if (article.title && article.description) {
           articles.push({
             title: article.title,
@@ -121,17 +168,11 @@ class MiddleEastIntelligence {
     
     // 英文新闻
     try {
-      const enResponse = await axios.get('https://newsapi.org/v2/everything', {
-        params: {
-          q: keywords,
-          language: 'en',
-          from: fromDate,
-          sortBy: 'publishedAt',
-          apiKey: config.newsApiKey
-        }
-      });
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=en&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsApiKey}`;
+      const responseData = await fetch(url);
+      const enResponse = JSON.parse(responseData);
       
-      enResponse.data.articles.forEach(article => {
+      enResponse.articles.forEach(article => {
         if (article.title && article.description) {
           articles.push({
             title: article.title,
@@ -198,8 +239,8 @@ class MiddleEastIntelligence {
 
   async scrapeAlJazeera() {
     const url = 'https://www.aljazeera.com/news/middleeast/';
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
+    const responseData = await fetch(url);
+    const $ = cheerio.load(responseData);
     const articles = [];
     
     $('article').each((index, element) => {
@@ -224,8 +265,8 @@ class MiddleEastIntelligence {
 
   async scrapeReuters() {
     const url = 'https://www.reuters.com/world/middle-east/';
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
+    const responseData = await fetch(url);
+    const $ = cheerio.load(responseData);
     const articles = [];
     
     $('article').each((index, element) => {
@@ -250,8 +291,8 @@ class MiddleEastIntelligence {
 
   async scrapeBBC() {
     const url = 'https://www.bbc.com/news/world/middle_east';
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
+    const responseData = await fetch(url);
+    const $ = cheerio.load(responseData);
     const articles = [];
     
     $('article').each((index, element) => {
@@ -276,8 +317,8 @@ class MiddleEastIntelligence {
 
   async scrapeXinhua() {
     const url = 'http://www.xinhuanet.com/world/middleeast.htm';
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
+    const responseData = await fetch(url);
+    const $ = cheerio.load(responseData);
     const articles = [];
     
     $('a').each((index, element) => {
@@ -301,8 +342,8 @@ class MiddleEastIntelligence {
 
   async scrapeHuanQiu() {
     const url = 'https://world.huanqiu.com/area/middleeast';
-    const response = await axios.get(url);
-    const $ = cheerio.load(response.data);
+    const responseData = await fetch(url);
+    const $ = cheerio.load(responseData);
     const articles = [];
     
     $('a').each((index, element) => {
@@ -326,17 +367,17 @@ class MiddleEastIntelligence {
 
   async sendPushPlus(content) {
     try {
-      const response = await axios.post('http://www.pushplus.plus/send', {
+      const response = await post('http://www.pushplus.plus/send', {
         token: config.pushPlusToken,
         title: '中东局势情报摘要',
         content: content.replace(/\n/g, '<br>'),
         template: 'html'
       });
       
-      if (response.data.code === 200) {
+      if (response.code === 200) {
         console.log('PushPlus推送成功');
       } else {
-        console.error('PushPlus推送失败:', response.data.msg);
+        console.error('PushPlus推送失败:', response.msg);
       }
     } catch (error) {
       console.error('发送PushPlus通知失败:', error.message);

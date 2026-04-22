@@ -4,17 +4,32 @@ class Analyzer {
   constructor() {
     this.keywords = config.keywords;
     this.cutoffDate = new Date('2026-04-20T00:00:00');
-    this.sentArticles = new Set();
+    this.sentArticles = new Set(); // 用于跟踪已发送的文章
   }
 
   analyze(articles) {
+    // 1. 过滤日期
     const recentArticles = this.filterByDate(articles);
+
+    // 2. 处理所有文章（包括英文），使用简单翻译
     const processedArticles = this.processArticles(recentArticles);
+
+    // 3. 过滤相关内容
     const relevantArticles = this.filterRelevant(processedArticles);
+
+    // 4. 过滤重复内容
     const uniqueArticles = this.filterDuplicates(relevantArticles);
+
+    // 5. 分析文章重要性
     const analyzedArticles = this.scoreArticles(uniqueArticles);
+
+    // 6. 按重要性排序
     const sortedArticles = this.sortByImportance(analyzedArticles);
+
+    // 7. 生成情报摘要
     const summary = this.generateSummary(sortedArticles);
+
+    // 8. 标记已发送的文章
     this.markAsSent(sortedArticles);
 
     return {
@@ -40,6 +55,7 @@ class Analyzer {
           isChinese: true
         };
       } else {
+        // 对英文文章进行强制翻译
         return {
           ...article,
           displayTitle: this.translateToChinese(article.title),
@@ -52,15 +68,19 @@ class Analyzer {
 
   cleanSummary(summary) {
     if (!summary) return '';
+    // 移除末尾的省略号
     return summary.replace(/\.\.\.$/, '');
   }
 
   translateToChinese(text) {
     if (!text) return '';
 
+    // 强制翻译所有英文内容
     let translated = text;
 
+    // 增强的翻译字典
     const translations = {
+      // 国家和地区
       'Israel': '以色列',
       'Palestine': '巴勒斯坦',
       'Iran': '伊朗',
@@ -79,11 +99,27 @@ class Analyzer {
       'Gaza': '加沙',
       'Jerusalem': '耶路撒冷',
       'West Bank': '约旦河西岸',
+      'Turkey': '土耳其',
+      'Afghanistan': '阿富汗',
+      'Pakistan': '巴基斯坦',
+      'Saudi': '沙特',
+      
+      // 组织和人物
       'Hezbollah': '真主党',
       'Hamas': '哈马斯',
       'Netanyahu': '内塔尼亚胡',
+      'Israeli': '以色列',
+      'Palestinian': '巴勒斯坦',
+      'Iranian': '伊朗',
+      'Saudi Arabian': '沙特阿拉伯',
+      
+      // 地区和事件
       'Middle East': '中东',
       'Middle East conflict': '中东冲突',
+      'Gaza Strip': '加沙地带',
+      'Arab-Israeli conflict': '阿以冲突',
+      
+      // 核心词汇
       'war': '战争',
       'peace': '和平',
       'ceasefire': '停火',
@@ -126,6 +162,10 @@ class Analyzer {
       'Britain': '英国',
       'France': '法国',
       'Germany': '德国',
+      'Israelis': '以色列人',
+      'Palestinians': '巴勒斯坦人',
+      
+      // 动作和状态
       'announcement': '宣布',
       'announced': '宣布',
       'statement': '声明',
@@ -148,6 +188,17 @@ class Analyzer {
       'new': '新的',
       'latest news': '最新消息',
       'breaking news': '突发新闻',
+      'situation': '局势',
+      'status': '状态',
+      'development': '发展',
+      'progress': '进展',
+      'issue': '问题',
+      'problem': '问题',
+      'conflict': '冲突',
+      'dispute': '争端',
+      'emergency': '紧急情况',
+      
+      // 常见短语
       'said': '表示',
       'says': '表示',
       'in response to': '回应',
@@ -209,17 +260,23 @@ class Analyzer {
       'outside': '在...外'
     };
 
+    // 按长度排序，优先翻译长短语
     const sortedTranslations = Object.entries(translations)
       .sort((a, b) => b[0].length - a[0].length);
 
+    // 执行翻译
     sortedTranslations.forEach(([en, zh]) => {
+      // 不使用边界匹配，确保能匹配到所有出现的地方
       const regex = new RegExp(en, 'gi');
       translated = translated.replace(regex, zh);
     });
 
+    // 清理多余的空格
     translated = translated.replace(/\s+/g, ' ').trim();
 
+    // 确保所有内容都是中文
     if (/^[a-zA-Z\s.,!?]+$/.test(translated)) {
+      // 如果仍然是英文，强制添加中文翻译
       translated = `[翻译] ${translated}`;
     }
 
@@ -246,6 +303,7 @@ class Analyzer {
   filterDuplicates(articles) {
     const seen = new Set();
     return articles.filter(article => {
+      // 使用标题作为去重依据
       const key = article.title || article.displayTitle;
       if (key && !seen.has(key) && !this.sentArticles.has(key)) {
         seen.add(key);
@@ -277,10 +335,12 @@ class Analyzer {
         }
       });
 
+      // 中文新闻额外加分
       if (article.isChinese) {
         score += 10;
       }
 
+      // 根据来源赋予不同权重
       if (article.source === 'Al Jazeera') {
         score += 5;
       } else if (article.source === 'Reuters Middle East') {

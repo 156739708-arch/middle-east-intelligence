@@ -134,44 +134,60 @@ class MiddleEastIntelligence {
     
     // 中文新闻
     try {
-      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=zh&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsApiKey}`;
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=zh&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsapi.apiKey}`;
+      console.log('请求中文新闻:', url);
       const responseData = await fetch(url);
       const zhResponse = JSON.parse(responseData);
       
-      zhResponse.articles.forEach(article => {
-        if (article.title && article.description) {
-          articles.push({
-            title: article.title,
-            summary: article.description,
-            link: article.url,
-            publishDate: article.publishedAt,
-            source: `NewsAPI (zh)`,
-            language: 'zh'
-          });
-        }
-      });
+      console.log('中文新闻响应:', JSON.stringify(zhResponse, null, 2));
+      
+      if (zhResponse.articles && Array.isArray(zhResponse.articles)) {
+        zhResponse.articles.forEach(article => {
+          if (article.title && article.description) {
+            articles.push({
+              title: article.title,
+              summary: article.description,
+              link: article.url,
+              publishDate: article.publishedAt,
+              source: `NewsAPI (zh)`,
+              language: 'zh'
+            });
+          }
+        });
+        console.log('获取到中文新闻:', zhResponse.articles.length, '篇');
+      } else {
+        console.error('中文新闻响应格式错误:', zhResponse);
+      }
     } catch (error) {
       console.error('获取中文新闻失败:', error.message);
     }
     
     // 英文新闻
     try {
-      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=en&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsApiKey}`;
+      const url = `https://newsapi.org/v2/everything?q=${encodeURIComponent(keywords)}&language=en&from=${fromDate}&sortBy=publishedAt&apiKey=${config.newsapi.apiKey}`;
+      console.log('请求英文新闻:', url);
       const responseData = await fetch(url);
       const enResponse = JSON.parse(responseData);
       
-      enResponse.articles.forEach(article => {
-        if (article.title && article.description) {
-          articles.push({
-            title: article.title,
-            summary: article.description,
-            link: article.url,
-            publishDate: article.publishedAt,
-            source: `NewsAPI (en)`,
-            language: 'en'
-          });
-        }
-      });
+      console.log('英文新闻响应:', JSON.stringify(enResponse, null, 2));
+      
+      if (enResponse.articles && Array.isArray(enResponse.articles)) {
+        enResponse.articles.forEach(article => {
+          if (article.title && article.description) {
+            articles.push({
+              title: article.title,
+              summary: article.description,
+              link: article.url,
+              publishDate: article.publishedAt,
+              source: `NewsAPI (en)`,
+              language: 'en'
+            });
+          }
+        });
+        console.log('获取到英文新闻:', enResponse.articles.length, '篇');
+      } else {
+        console.error('英文新闻响应格式错误:', enResponse);
+      }
     } catch (error) {
       console.error('获取英文新闻失败:', error.message);
     }
@@ -182,7 +198,7 @@ class MiddleEastIntelligence {
   async sendPushPlus(content) {
     try {
       const response = await post('http://www.pushplus.plus/send', {
-        token: config.pushPlusToken,
+        token: config.pushplus.token,
         title: '中东局势情报摘要',
         content: content.replace(/\n/g, '<br>'),
         template: 'html'

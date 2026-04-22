@@ -37,42 +37,6 @@ function fetch(url, options = {}) {
   });
 }
 
-// 封装https POST请求函数
-function post(url, data) {
-  return new Promise((resolve, reject) => {
-    const postData = JSON.stringify(data);
-    
-    const options = {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': postData.length
-      }
-    };
-    
-    const req = https.request(url, options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data));
-        } catch (e) {
-          resolve(data);
-        }
-      });
-    });
-    
-    req.on('error', (error) => {
-      reject(error);
-    });
-    
-    req.write(postData);
-    req.end();
-  });
-}
-
 class MiddleEastIntelligence {
   constructor() {
     this.analyzer = new Analyzer();
@@ -159,7 +123,7 @@ class MiddleEastIntelligence {
       const responseData = await fetch(url);
       const zhResponse = JSON.parse(responseData);
       
-      console.log('中文新闻响应:', JSON.stringify(zhResponse, null, 2));
+      console.log('中文新闻响应状态:', zhResponse.status);
       
       if (zhResponse.articles && Array.isArray(zhResponse.articles)) {
         zhResponse.articles.forEach(article => {
@@ -189,7 +153,7 @@ class MiddleEastIntelligence {
       const responseData = await fetch(url);
       const enResponse = JSON.parse(responseData);
       
-      console.log('英文新闻响应:', JSON.stringify(enResponse, null, 2));
+      console.log('英文新闻响应状态:', enResponse.status);
       
       if (enResponse.articles && Array.isArray(enResponse.articles)) {
         enResponse.articles.forEach(article => {
@@ -217,17 +181,59 @@ class MiddleEastIntelligence {
 
   async sendPushPlus(content) {
     try {
-      const response = await post('https://www.pushplus.plus/send', {
+      // 构造PushPlus请求数据
+      const pushData = {
         token: config.pushplus.token,
         title: '中东局势情报摘要',
         content: content.replace(/\n/g, '<br>'),
         template: 'html'
+      };
+      
+      console.log('发送PushPlus请求:', pushData.title);
+      
+      // 直接使用https模块发送请求
+      const postData = JSON.stringify(pushData);
+      const options = {
+        hostname: 'www.pushplus.plus',
+        port: 443,
+        path: '/send',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData),
+          'User-Agent': 'Middle-East-Intelligence-Miner/1.0'
+        }
+      };
+      
+      const response = await new Promise((resolve, reject) => {
+        const req = https.request(options, (res) => {
+          let data = '';
+          res.on('data', (chunk) => {
+            data += chunk;
+          });
+          res.on('end', () => {
+            try {
+              resolve(JSON.parse(data));
+            } catch (e) {
+              resolve(data);
+            }
+          });
+        });
+        
+        req.on('error', (error) => {
+          reject(error);
+        });
+        
+        req.write(postData);
+        req.end();
       });
+      
+      console.log('PushPlus响应:', response);
       
       if (response.code === 200) {
         console.log('PushPlus推送成功');
       } else {
-        console.error('PushPlus推送失败:', response.msg);
+        console.error('PushPlus推送失败:', response.msg || response);
       }
     } catch (error) {
       console.error('发送PushPlus通知失败:', error.message);

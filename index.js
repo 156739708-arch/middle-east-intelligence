@@ -129,7 +129,7 @@ class MiddleEastIntelligence {
 
   async fetchFromNewsAPI() {
     const articles = [];
-    const keywords = config.keywords.join(' OR ');
+    const keywords = (config.keywords && Array.isArray(config.keywords)) ? config.keywords.join(' OR ') : 'Middle East conflict';
     const fromDate = '2026-04-20';
     
     // 中文新闻

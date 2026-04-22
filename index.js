@@ -1,5 +1,4 @@
 const https = require('https');
-const cheerio = require('cheerio');
 const cron = require('node-cron');
 const config = require('./config/config');
 const Analyzer = require('./src/analyzer');
@@ -65,8 +64,6 @@ class MiddleEastIntelligence {
   async start() {
     console.log('中东局势情报系统启动中...');
     console.log('系统配置:');
-    console.log('- 国际新闻源: Al Jazeera, Reuters, BBC');
-    console.log('- 国内新闻源: 新华网, 环球网');
     console.log('- NewsAPI: 已配置');
     console.log('- 翻译功能: 已启用 (仅处理英文文档)');
     console.log('- 推送方式: PushPlus');
@@ -118,22 +115,13 @@ class MiddleEastIntelligence {
   async collectArticles() {
     const articles = [];
     
-    // 尝试从NewsAPI获取新闻（优先）
+    // 从NewsAPI获取新闻
     try {
       const newsApiArticles = await this.fetchFromNewsAPI();
       articles.push(...newsApiArticles);
       console.log(`从NewsAPI获取到 ${newsApiArticles.length} 篇文章`);
     } catch (error) {
       console.error('从NewsAPI获取新闻失败:', error.message);
-    }
-    
-    // 尝试从其他来源获取新闻
-    try {
-      const webScrapedArticles = await this.fetchFromWebSources();
-      articles.push(...webScrapedArticles);
-      console.log(`从网页源获取到 ${webScrapedArticles.length} 篇文章`);
-    } catch (error) {
-      console.error('从网页源获取新闻失败:', error.message);
     }
     
     return articles;
@@ -187,180 +175,6 @@ class MiddleEastIntelligence {
     } catch (error) {
       console.error('获取英文新闻失败:', error.message);
     }
-    
-    return articles;
-  }
-
-  async fetchFromWebSources() {
-    const articles = [];
-    
-    // 尝试从Al Jazeera获取新闻
-    try {
-      const alJazeeraArticles = await this.scrapeAlJazeera();
-      articles.push(...alJazeeraArticles);
-    } catch (error) {
-      console.error('Error scraping Al Jazeera:', error.message);
-    }
-    
-    // 尝试从Reuters获取新闻
-    try {
-      const reutersArticles = await this.scrapeReuters();
-      articles.push(...reutersArticles);
-    } catch (error) {
-      console.error('Error scraping Reuters Middle East:', error.message);
-    }
-    
-    // 尝试从BBC获取新闻
-    try {
-      const bbcArticles = await this.scrapeBBC();
-      articles.push(...bbcArticles);
-    } catch (error) {
-      console.error('Error scraping BBC Middle East:', error.message);
-    }
-    
-    // 尝试从新华网获取新闻
-    try {
-      const xinhuaArticles = await this.scrapeXinhua();
-      articles.push(...xinhuaArticles);
-    } catch (error) {
-      console.error('Error scraping Xinhua:', error.message);
-    }
-    
-    // 尝试从环球网获取新闻
-    try {
-      const huanqiuArticles = await this.scrapeHuanQiu();
-      articles.push(...huanqiuArticles);
-    } catch (error) {
-      console.error('Error scraping HuanQiu:', error.message);
-    }
-    
-    return articles;
-  }
-
-  async scrapeAlJazeera() {
-    const url = 'https://www.aljazeera.com/news/middleeast/';
-    const responseData = await fetch(url);
-    const $ = cheerio.load(responseData);
-    const articles = [];
-    
-    $('article').each((index, element) => {
-      const title = $(element).find('h3').text().trim();
-      const link = $(element).find('a').attr('href');
-      const summary = $(element).find('p').text().trim();
-      
-      if (title && link) {
-        articles.push({
-          title,
-          summary,
-          link: link.startsWith('http') ? link : `https://www.aljazeera.com${link}`,
-          publishDate: new Date().toISOString(),
-          source: 'Al Jazeera',
-          language: 'en'
-        });
-      }
-    });
-    
-    return articles;
-  }
-
-  async scrapeReuters() {
-    const url = 'https://www.reuters.com/world/middle-east/';
-    const responseData = await fetch(url);
-    const $ = cheerio.load(responseData);
-    const articles = [];
-    
-    $('article').each((index, element) => {
-      const title = $(element).find('h3').text().trim();
-      const link = $(element).find('a').attr('href');
-      const summary = $(element).find('p').text().trim();
-      
-      if (title && link) {
-        articles.push({
-          title,
-          summary,
-          link: link.startsWith('http') ? link : `https://www.reuters.com${link}`,
-          publishDate: new Date().toISOString(),
-          source: 'Reuters Middle East',
-          language: 'en'
-        });
-      }
-    });
-    
-    return articles;
-  }
-
-  async scrapeBBC() {
-    const url = 'https://www.bbc.com/news/world/middle_east';
-    const responseData = await fetch(url);
-    const $ = cheerio.load(responseData);
-    const articles = [];
-    
-    $('article').each((index, element) => {
-      const title = $(element).find('h3').text().trim();
-      const link = $(element).find('a').attr('href');
-      const summary = $(element).find('p').text().trim();
-      
-      if (title && link) {
-        articles.push({
-          title,
-          summary,
-          link: link.startsWith('http') ? link : `https://www.bbc.com${link}`,
-          publishDate: new Date().toISOString(),
-          source: 'BBC Middle East',
-          language: 'en'
-        });
-      }
-    });
-    
-    return articles;
-  }
-
-  async scrapeXinhua() {
-    const url = 'http://www.xinhuanet.com/world/middleeast.htm';
-    const responseData = await fetch(url);
-    const $ = cheerio.load(responseData);
-    const articles = [];
-    
-    $('a').each((index, element) => {
-      const title = $(element).text().trim();
-      const link = $(element).attr('href');
-      
-      if (title && link && link.includes('xinhuanet.com') && title.length > 10) {
-        articles.push({
-          title,
-          summary: title,
-          link,
-          publishDate: new Date().toISOString(),
-          source: '新华网',
-          language: 'zh'
-        });
-      }
-    });
-    
-    return articles;
-  }
-
-  async scrapeHuanQiu() {
-    const url = 'https://world.huanqiu.com/area/middleeast';
-    const responseData = await fetch(url);
-    const $ = cheerio.load(responseData);
-    const articles = [];
-    
-    $('a').each((index, element) => {
-      const title = $(element).text().trim();
-      const link = $(element).attr('href');
-      
-      if (title && link && link.includes('huanqiu.com') && title.length > 10) {
-        articles.push({
-          title,
-          summary: title,
-          link,
-          publishDate: new Date().toISOString(),
-          source: '环球网',
-          language: 'zh'
-        });
-      }
-    });
     
     return articles;
   }

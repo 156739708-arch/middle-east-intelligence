@@ -5,8 +5,25 @@ const Analyzer = require('./src/analyzer');
 
 // 封装https请求函数
 function fetch(url, options = {}) {
+  // 添加User-Agent头
+  const defaultOptions = {
+    headers: {
+      'User-Agent': 'Middle-East-Intelligence-Miner/1.0'
+    }
+  };
+  
+  // 合并选项
+  const mergedOptions = {
+    ...defaultOptions,
+    ...options,
+    headers: {
+      ...defaultOptions.headers,
+      ...options.headers
+    }
+  };
+  
   return new Promise((resolve, reject) => {
-    https.get(url, options, (res) => {
+    https.get(url, mergedOptions, (res) => {
       let data = '';
       res.on('data', (chunk) => {
         data += chunk;
